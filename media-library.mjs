@@ -177,7 +177,7 @@ export function createMediaLibrary(data,options={}){
   const input=await body(req);
   if(route==='roots'){
    if(scanning)throw error('请等待当前扫描完成再修改目录',409);
-   if(!Array.isArray(input.roots)||input.roots.length>30||input.roots.some(r=>typeof r!=='string'||!path.isAbsolute(r)||r==='/'||r.length>2048))throw error('请输入有效的素材文件夹绝对路径（最多 30 个，不允许磁盘根目录）');
+   if(!Array.isArray(input.roots)||input.roots.length>30||input.roots.some(r=>typeof r!=='string'||!path.isAbsolute(r)||path.resolve(r)===path.parse(path.resolve(r)).root||r.length>2048))throw error('请输入有效的素材文件夹绝对路径（最多 30 个，不允许磁盘根目录）');
    config={roots:[...new Set(input.roots.map(r=>path.resolve(r)))]};fs.writeFileSync(configFile+'.tmp',JSON.stringify(config,null,2));fs.renameSync(configFile+'.tmp',configFile);
    const keep=new Set(config.roots);for(const {root} of db.prepare('SELECT DISTINCT root FROM media').all())if(!keep.has(root))db.prepare('DELETE FROM media WHERE root=?').run(root);
    indexRevision++;void scan();return send(res,200,summary());

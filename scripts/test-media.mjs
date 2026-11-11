@@ -6,7 +6,8 @@ import path from 'node:path';
 import http from 'node:http';
 import {randomUUID,createHash} from 'node:crypto';
 import {createMediaLibrary} from '../media-library.mjs';
-const temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'mamba-media-test-')));
+// Use the same native canonicalization as the scanner (Windows temp paths can have short aliases).
+const temp=await fsp.realpath(fs.mkdtempSync(path.join(os.tmpdir(),'mamba-media-test-')));
 const root2=path.join(temp,'另一个','素材');fs.mkdirSync(root2,{recursive:true});
 const root=path.join(temp,'素材'), data=path.join(temp,'data');fs.mkdirSync(root);fs.mkdirSync(data);
 fs.writeFileSync(path.join(data,'media-library.json'),JSON.stringify({roots:[root,root2]}));
@@ -20,7 +21,7 @@ const base='http://127.0.0.1:'+server.address().port+'/api/media/';
 async function call(route,input){const response=await fetch(base+route,input?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input)}:{});return{status:response.status,data:await response.json()};}
 try{
  await library.scan();assert.equal(library.summary().total,2);
- const chinese=await call('search?q='+encodeURIComponent('城市风光'));assert.equal(chinese.data.total,1);assert.equal(chinese.data.rows[0].name,'city.mp4');assert.equal(chinese.data.rows[0].displayName,'城市风光 100%_01.mp4');assert.equal((await call('search?q=city')).data.rows[0].id,chinese.data.rows[0].id);assert.equal((await call('search?q='+encodeURIComponent('风光 100%_'))).data.total,1);assert.equal(await (await fetch(base+'file?id='+chinese.data.rows[0].id)).text(),'0123456789');
+ const chinese=await call('search?q='+encodeURIComponent('城市风光'));assert.equal(chinese.data.total,1,JSON.stringify({root,canonical:await fsp.realpath(root),rows:(await call('search?q=city')).data.rows,warnings:library.summary().warnings}));assert.equal(chinese.data.rows[0].name,'city.mp4');assert.equal(chinese.data.rows[0].displayName,'城市风光 100%_01.mp4');assert.equal((await call('search?q=city')).data.rows[0].id,chinese.data.rows[0].id);assert.equal((await call('search?q='+encodeURIComponent('风光 100%_'))).data.total,1);assert.equal(await (await fetch(base+'file?id='+chinese.data.rows[0].id)).text(),'0123456789');
  await library.scan();assert.equal((await call('search?q='+encodeURIComponent('城市'))).data.total,1);
  const found=await call('search?q='+encodeURIComponent('雨声'));assert.equal(found.data.rows.length,1);const id=found.data.rows[0].id;
  assert.equal((await call('search?q=%25')).data.total,2);assert.equal((await call('search?kind=video')).data.total,1);
@@ -29,6 +30,7 @@ try{
  assert.equal((await fetch(base+'file?id='+id,{headers:{Range:'bytes=20-30'}})).status,416);
  assert.equal((await call('file?id=../../etc/passwd')).status,404);
  assert.equal((await call('roots',{roots:['/']})).status,400);
+ assert.equal((await call('roots',{roots:[path.parse(root).root]})).status,400);
  const input={requestId:randomUUID(),id:chinese.data.rows[0].id,projectId:'p',timelineId:'t',position:'end',videoTrack:1,audioTrack:1,videoMode:'both'};
  const [first,second]=await Promise.all([call('import',input),call('import',{...input,requestId:randomUUID()})]);assert.equal(first.status,200);assert.equal(second.status,409);assert.equal(calls,1);assert.equal(lastImportedPath,path.join(root,'city.mp4'));
  assert.equal((await call('import',input)).data.ok,true);assert.equal(calls,1);assert.equal((await call('import',{...input,audioTrack:2})).status,409);
