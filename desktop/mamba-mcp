@@ -1,6 +1,11 @@
 #!/bin/sh
 set -eu
 resources=$(cd "$(dirname "$0")/.." && pwd)
-node_bin=$(/usr/bin/plutil -extract node raw -o - "$resources/runtime.json")
-data_dir=$(/usr/bin/plutil -extract data raw -o - "$resources/runtime.json")
+if [[ $(/usr/bin/plutil -extract portable raw -o - "$resources/runtime.json" 2>/dev/null || true) == true ]]; then
+    node_bin="$resources/runtime/node"
+    data_dir="$HOME/Library/Application Support/Black Mamba Workbench/workspace"
+else
+    node_bin=$(/usr/bin/plutil -extract node raw -o - "$resources/runtime.json")
+    data_dir=$(/usr/bin/plutil -extract data raw -o - "$resources/runtime.json")
+fi
 exec "$node_bin" "$resources/mcp/tasks.mjs" --db "$data_dir/tasks.sqlite" "$@"
