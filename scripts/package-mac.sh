@@ -34,7 +34,7 @@ JS
 version=$("$node_bin" -p 'JSON.parse(require("fs").readFileSync("package.json")).version')
 plutil -replace CFBundleShortVersionString -string "$version" "$bundle/Contents/Info.plist"
 plutil -replace CFBundleVersion -string "$version" "$bundle/Contents/Info.plist"
-plutil -insert LSMinimumSystemVersion -string 13.0 "$bundle/Contents/Info.plist"
+plutil -insert LSMinimumSystemVersion -string 13.5 "$bundle/Contents/Info.plist"
 # Preserve the Node Foundation signature; seal only the outer application ad hoc.
 codesign --force --sign - "$bundle"
 codesign --verify --deep --strict "$bundle"
@@ -42,7 +42,7 @@ ln -s /Applications "$output/stage/Applications"
 cat > "$output/stage/安装说明.txt" <<'TXT'
 黑曼巴工作台 Mac 测试版
 
-适用于 macOS 13 或更高版本，Apple 芯片与 Intel Mac。
+适用于 macOS 13.5 或更高版本，Apple 芯片与 Intel Mac。
 将「黑曼巴工作台.app」拖入「Applications」，再从应用程序启动。
 自带 Node 运行时；首次打开为空项目库，不包含任何客户资料或账号。
 测试版未获得 Apple 开发者签名和公证，可能需要在系统设置「隐私与安全性」允许打开。
