@@ -1,0 +1,73 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import fsp from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import http from 'node:http';
+import {randomUUID,createHash} from 'node:crypto';
+import {createMediaLibrary} from '../media-library.mjs';
+const temp=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'mamba-media-test-')));
+const root2=path.join(temp,'另一个','素材');fs.mkdirSync(root2,{recursive:true});
+const root=path.join(temp,'素材'), data=path.join(temp,'data');fs.mkdirSync(root);fs.mkdirSync(data);
+fs.writeFileSync(path.join(data,'media-library.json'),JSON.stringify({roots:[root,root2]}));
+fs.writeFileSync(path.join(root,'雨声 100%.wav'),'0123456789');
+fs.writeFileSync(path.join(root,'city.mp4'),'0123456789');fs.writeFileSync(path.join(root,'ignored.txt'),'secret');
+fs.symlinkSync('/etc',path.join(root,'escape'));let calls=0,fail=false,lastImportedPath='';
+fs.writeFileSync(path.join(data,'media-names.zh.json'),JSON.stringify({version:1,entries:[{id:createHash('sha256').update(path.join(root,'city.mp4')).digest('hex'),original:'city.mp4',display:'城市风光 100%_01.mp4'}]}));
+let library=createMediaLibrary(data,{bridge:async input=>{if(input.action==='status')return{ok:true};calls++;lastImportedPath=input.path;await new Promise(r=>setTimeout(r,40));if(fail)throw Object.assign(Error('unknown outcome'),{status:503});return{ok:true,items:[{name:'test'}]};}});
+const server=http.createServer((req,res)=>library.request(req,res,new URL(req.url,'http://localhost')));await new Promise(r=>server.listen(0,'127.0.0.1',r));
+const base='http://127.0.0.1:'+server.address().port+'/api/media/';
+async function call(route,input){const response=await fetch(base+route,input?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input)}:{});return{status:response.status,data:await response.json()};}
+try{
+ await library.scan();assert.equal(library.summary().total,2);
+ const chinese=await call('search?q='+encodeURIComponent('城市风光'));assert.equal(chinese.data.total,1);assert.equal(chinese.data.rows[0].name,'city.mp4');assert.equal(chinese.data.rows[0].displayName,'城市风光 100%_01.mp4');assert.equal((await call('search?q=city')).data.rows[0].id,chinese.data.rows[0].id);assert.equal((await call('search?q='+encodeURIComponent('风光 100%_'))).data.total,1);assert.equal(await (await fetch(base+'file?id='+chinese.data.rows[0].id)).text(),'0123456789');
+ await library.scan();assert.equal((await call('search?q='+encodeURIComponent('城市'))).data.total,1);
+ const found=await call('search?q='+encodeURIComponent('雨声'));assert.equal(found.data.rows.length,1);const id=found.data.rows[0].id;
+ assert.equal((await call('search?q=%25')).data.total,2);assert.equal((await call('search?kind=video')).data.total,1);
+ const range=await fetch(base+'file?id='+id,{headers:{Range:'bytes=2-5'}});assert.equal(range.status,206);assert.equal(await range.text(),'2345');
+ const suffix=await fetch(base+'file?id='+id,{headers:{Range:'bytes=-2'}});assert.equal(await suffix.text(),'89');
+ assert.equal((await fetch(base+'file?id='+id,{headers:{Range:'bytes=20-30'}})).status,416);
+ assert.equal((await call('file?id=../../etc/passwd')).status,404);
+ assert.equal((await call('roots',{roots:['/']})).status,400);
+ const input={requestId:randomUUID(),id:chinese.data.rows[0].id,projectId:'p',timelineId:'t',position:'end',videoTrack:1,audioTrack:1,videoMode:'both'};
+ const [first,second]=await Promise.all([call('import',input),call('import',{...input,requestId:randomUUID()})]);assert.equal(first.status,200);assert.equal(second.status,409);assert.equal(calls,1);assert.equal(lastImportedPath,path.join(root,'city.mp4'));
+ assert.equal((await call('import',input)).data.ok,true);assert.equal(calls,1);assert.equal((await call('import',{...input,audioTrack:2})).status,409);
+ fail=true;assert.equal((await call('import',{...input,requestId:randomUUID()})).status,503);assert.equal(library.summary().importLocked,true);assert.equal((await call('import',{...input,requestId:randomUUID()})).status,409);
+ await call('unlock',{});assert.equal(library.summary().importLocked,false);
+ const outsider=path.join(temp,'outside.wav');fs.writeFileSync(outsider,'private');fs.unlinkSync(path.join(root,'雨声 100%.wav'));fs.symlinkSync(outsider,path.join(root,'雨声 100%.wav'));assert.equal((await call('file?id='+id)).status,404);
+ await library.scan();assert.equal(library.summary().total,1);
+ for(const [folder,file] of [['音效/雨','rain.wav'],['音效/雨后','after.wav'],['🎬/50%_镜头','clip.mp4']]){const dir=path.join(root,folder);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,file),'0123456789');}
+ fs.writeFileSync(path.join(root2,'second.mp4'),'test');await library.scan();
+ const trees=(await call('directories')).data.trees;assert.equal(trees.length,2);assert.deepEqual(trees.map(t=>t.name),['素材','素材']);assert.equal(trees[0].count,4);assert.equal(trees[1].count,1);
+ const audioFolder=trees[0].children.find(c=>c.name==='音效');assert.equal(audioFolder.count,2);assert.equal(audioFolder.children.find(c=>c.name==='雨').count,1);
+ const folderSearch=async(folder,extra={})=>call('search?'+new URLSearchParams({root,folder,...extra}));
+ assert.equal((await folderSearch(path.join(root,'音效'))).data.total,2);
+ assert.equal((await folderSearch(path.join(root,'音效/雨'))).data.total,1);
+ assert.equal((await folderSearch(path.join(root,'🎬/50%_镜头'),{kind:'video',q:'clip'})).data.total,1);
+ assert.equal((await folderSearch(root2)).status,404);
+ assert.equal((await folderSearch(path.join(root,'音效/雨'),{q:'after'})).data.total,0);
+ assert.equal((await folderSearch('/etc')).status,404);
+ // A stereo signal with opposite phases must not disappear through mono cancellation.
+ const audioPath=path.join(root,'音效/雨/rain.wav'),sampleRate=8000,frames=8000,wav=Buffer.alloc(44+frames*4);
+ wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(2,22);wav.writeUInt32LE(sampleRate,24);wav.writeUInt32LE(sampleRate*4,28);wav.writeUInt16LE(4,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(frames*4,40);
+ for(let i=0;i<frames;i++){const level=i<2000||i>=6000?0:i<4000?.2:.8,value=Math.round(Math.sin(i*2*Math.PI*400/sampleRate)*level*32767);wav.writeInt16LE(value,44+i*4);wav.writeInt16LE(-value,46+i*4);}
+ fs.writeFileSync(audioPath,wav);await library.scan();const audio=(await folderSearch(path.dirname(audioPath))).data.rows[0];
+ const results=await Promise.all([call('waveform?id='+audio.id),call('waveform?id='+audio.id)]);
+ assert.equal(results[0].status,200);assert.deepEqual(results[0].data,results[1].data);
+ const wave=results[0].data;assert.equal(wave.peaks.length,128);assert.equal(wave.duration,1);assert.equal(wave.silent,false);assert.equal(wave.peaks[10],0);assert.ok(wave.peaks[45]>.2&&wave.peaks[45]<.3);assert.ok(wave.peaks[80]>.95);assert.equal(wave.peaks[115],0);
+ const cacheDir=path.join(data,'media-previews'),cached=fs.readdirSync(cacheDir).filter(f=>f.endsWith('.wave.json'));assert.equal(cached.length,1);const timestamp=fs.statSync(path.join(cacheDir,cached[0])).mtimeMs;
+ assert.deepEqual((await call('waveform?id='+audio.id)).data,wave);assert.equal(fs.statSync(path.join(cacheDir,cached[0])).mtimeMs,timestamp);
+ wav.fill(0,44);fs.writeFileSync(audioPath,wav);fs.utimesSync(audioPath,new Date(),new Date(Date.now()+2000));
+ const silent=(await call('waveform?id='+audio.id)).data;assert.equal(silent.silent,true);assert.ok(silent.peaks.every(p=>p===0));assert.equal(fs.readdirSync(cacheDir).filter(f=>f.endsWith('.wave.json')).length,2);
+ const video=(await call('search?kind=video')).data.rows[0];assert.equal((await call('waveform?id='+video.id)).status,400);assert.equal((await call('waveform?id=missing')).status,404);
+ const broken=(await folderSearch(path.join(root,'音效/雨后'))).data.rows[0];assert.equal((await call('waveform?id='+broken.id)).status,422);
+ console.log('PASS waveforms: actual amplitude envelope, stereo phase, full duration, silence, concurrent deduplication, cache reuse/invalidation, invalid/missing media');
+ library.close();library=createMediaLibrary(data);assert.equal((await call('search?q='+encodeURIComponent('城市风光'))).data.total,1);
+ const nameCatalog=JSON.parse(fs.readFileSync(path.join(data,'media-names.zh.json'),'utf8'));nameCatalog.entries[0].original='not-city.mp4';fs.writeFileSync(path.join(data,'media-names.zh.json'),JSON.stringify(nameCatalog));library.close();library=createMediaLibrary(data);
+ assert.equal((await call('search?q='+encodeURIComponent('城市风光'))).data.total,0);assert.equal((await call('search?q=city')).data.rows[0].displayName,'city.mp4');
+ nameCatalog.entries[0].original='city.mp4';fs.writeFileSync(path.join(data,'media-names.zh.json'),JSON.stringify(nameCatalog));library.close();library=createMediaLibrary(data);
+ fs.writeFileSync(path.join(data,'media-names.zh.json'),'{invalid');library.close();library=createMediaLibrary(data);assert.equal((await call('search?q='+encodeURIComponent('城市风光'))).data.total,1);assert.ok(library.summary().warnings.some(w=>w.includes('中文名称')));
+ console.log('PASS Chinese aliases: bilingual search, literal wildcard, unchanged original stream, scan/restart persistence, stale-name guard, malformed catalog preserves last good aliases');
+ fs.renameSync(root,root+'-offline');await library.scan();assert.equal(library.summary().total,5);assert.ok(library.summary().warnings.length);
+ console.log('PASS media: search/filter, escaped query, range/suffix, missing/offline media, symlink boundary, serialized import, durable idempotency, uncertain-result lock');
+}finally{await new Promise(r=>server.close(r));library.close();await fsp.rm(temp,{recursive:true,force:true});}

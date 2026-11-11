@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const context=vm.createContext({});vm.runInContext(fs.readFileSync('web/production-records.js','utf8'),context);
+const {appendCopyDraft,savedCopyDrafts,stageOutputs}=context;
+const base={id:'p',stageEntries:[{id:'brief',title:'客户简报',stage:'brief',note:'原始资料'},{id:'manual',title:'导演方案',stage:'creative',note:'保留原文'},
+{id:'creative-old',stage:'creative',title:'智能体文案 · 旧日期',version:'对话生成',note:'旧文案',status:'待复核'}]};
+const before=JSON.stringify(base),full='长文案\n'.repeat(2000);
+assert.equal(savedCopyDrafts(base)[0].draftNumber,1);assert.equal(savedCopyDrafts(base).length,1);assert.equal(context.isCopyDraft(savedCopyDrafts(base)[0]),true);assert.equal(context.outputTitle(savedCopyDrafts(base)[0]),'文案第 1 稿');
+const second=appendCopyDraft(base,{id:'new',draft:full},1000);
+assert.equal(second.row.draftNumber,2);assert.equal(second.row.note,full);assert.equal(second.project.stageEntries.length,4);
+assert.equal(JSON.stringify(base),before);assert.equal(second.row.status,'待复核');
+const duplicate=appendCopyDraft(second.project,{id:'new',draft:full},2000);
+assert.equal(duplicate.created,false);assert.equal(duplicate.project,second.project);assert.equal(duplicate.row.draftNumber,2);
+assert.equal(appendCopyDraft({id:'other'},{id:'new',draft:'另一项目'}).row.draftNumber,1);
+const imported={stageEntries:[{...second.row,draftNumber:8}]};assert.equal(appendCopyDraft(imported,{id:'third',draft:'新稿'}).row.draftNumber,9);
+assert.equal(stageOutputs(second.project,{id:'brief'}).length,2);
+assert.equal(stageOutputs({stageEntries:[{stage:'preproduction',title:'准备'},{stage:'production',title:'素材'}]},{id:'preproduction'}).length,1);
+assert.throws(()=>appendCopyDraft(base,{id:'x',draft:''}));
+console.log('PASS independent draft numbering, legacy inference, immutable history, idempotent save, full-length copy, imported numbering, output filtering');

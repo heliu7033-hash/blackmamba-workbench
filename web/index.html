@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0A0A0A">
+  <title>黑曼巴 · 工作室制片台</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="cyber.css">
+  <link rel="stylesheet" href="skills.css">
+  <link rel="stylesheet" href="studio.css">
+  <link rel="stylesheet" href="media-library.css">
+  <link rel="stylesheet" href="creative-chat.css">
+  <link rel="stylesheet" href="project-tree.css">
+  <link rel="stylesheet" href="materials-studio.css">
+  <link rel="stylesheet" href="postproduction.css">
+</head>
+<body>
+  <aside>
+    <a class="brand" href="#overview" aria-label="黑曼巴工作台首页"><img src="brand.svg" alt="黑曼巴视效"></a>
+    <a id="official-site" class="official-site" href="https://blackmambastudio.com" rel="noopener noreferrer">官网 ↗</a>
+    <nav id="nav" aria-label="工作空间">
+      <button data-view="总览" class="selected"><span>工作台</span></button>
+      <button data-view="项目"><span>项目</span></button>
+      <button data-view="创意"><span>灵感</span></button>
+      <button data-view="官网"><span>工具</span></button>
+    </nav>
+    <div class="side-bottom">
+      <div class="local-dot">本地工作空间</div>
+      <p>项目资料保存在本机浏览器。<br>定期导出备份。</p>
+      <button id="backup">↗ 导出备份</button>
+      <button id="restore">↙ 导入备份</button>
+      <input type="file" id="import" accept="application/json,.json" hidden>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <div class="breadcrumb"><button id="nav-back" type="button" aria-label="返回上一页" hidden>← 返回</button><b id="crumb">工作台</b></div>
+      <button type="button" class="command-trigger" id="command-trigger" aria-label="打开命令面板">搜索命令 <kbd>⌘K</kbd></button>
+    </header>
+    <section class="heading">
+      <div><h1 id="title">项目工作台</h1><p id="subtitle"></p></div>
+      <button class="primary" id="add">＋ 新建项目</button>
+    </section>
+    <nav id="section-nav" aria-label="分区页面" hidden>
+      <button type="button" data-view="项目">全部项目</button><button type="button" data-view="剧组流程">制作流程</button><button type="button" data-view="任务">本机任务</button>
+      <button type="button" data-view="素材">素材库</button><button type="button" data-view="官网">官网与链接</button><button type="button" data-view="智能体">智能体</button><button type="button" data-view="技能">已安装技能</button><button type="button" data-view="资料">本地资料</button>
+    </nav>
+    <div class="map-toolbar" id="context-picker" hidden><label>制作项目 <select id="map-project"></select></label><button id="workflow-add">＋ 新建项目</button></div>
+    <section id="overview" aria-label="项目入口">
+      <div id="project-portals" class="project-portals"></div>
+    </section>
+    <dialog id="project-detail" aria-labelledby="detail-title">
+      <div class="detail-heading"><h2 id="detail-title">项目详情</h2><button id="detail-close" aria-label="关闭项目详情">×</button></div>
+      <div id="detail-body"></div>
+    </dialog>
+
+    <section id="stage-content" hidden></section>
+    <dialog id="stage-form-dialog" aria-labelledby="stage-form-title"></dialog>
+    <section id="workflow-view" hidden>
+      <section id="map-today" class="tree-root"></section>
+      <div class="project-tree" id="workflow-board" aria-label="项目阶段关系图"></div>
+      <section id="stage-inspector" tabindex="-1" aria-label="选中阶段详情"></section>
+      <details class="role-details"><summary>剧组岗位与交接</summary><div class="role-strip" id="role-strip"></div><button type="button" id="workflow-rules">查看工作规则</button></details>
+    </section>
+
+    <section class="cloud-panel" id="assistant-panel">
+      <div class="eyebrow">制片助手 / PRODUCTION COORDINATOR</div>
+      <h2>统筹、拆解、检查交付</h2>
+      <p>工作台记录流程与成果；任务需要你明确交代后才会执行。它不会假装自动派工，也不会将方案当成成片。</p>
+      <a class="primary" href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">打开制片助手对话 ↗</a>
+      <p class="cloud-explain">可从项目卡复制制作简报，再发给制片助手统筹。交付记录请写入对应阶段。</p>
+    </section>
+    <section class="cloud-panel" id="cloud-workbench">
+      <section id="task-context" class="map-root"></section>
+      <div class="task-toolbar"><label>任务分区 <select id="cloud-project" aria-label="项目分区"><option>广告创作</option><option>开放创新公司</option><option>日常管理</option></select></label><button id="cloud-refresh">刷新</button><button id="cloud-new" class="primary">＋ 新建任务</button></div>
+      <div id="cloud-records"></div>
+      <p id="cloud-state" role="status">正在读取本机…</p><details class="role-details"><summary>任务记录与迁移</summary><button id="cloud-migrate">迁移本地记录</button></details>
+    </section>
+
+    <section id="media-view" hidden aria-label="本地素材库">
+      <div class="media-toolbar"><input id="media-query" type="search" placeholder="搜索中文名、英文原名、目录…" aria-label="搜索素材"><select id="media-kind" aria-label="素材类型"><option value="">全部类型</option><option value="video">视频</option><option value="audio">音频</option><option value="image">图片</option></select><label class="media-hover-option"><input type="checkbox" id="media-hover-sound" checked>悬停预览声音</label><button id="media-scan" type="button">重新扫描</button></div>
+      <div class="media-summary"><span id="media-count">正在读取素材库…</span><span>本地素材 · 直接剪辑</span></div>
+      <p id="media-state" class="media-feedback" role="status" aria-live="polite"></p><p id="media-warnings" class="media-warnings"></p>
+      <div class="media-layout"><div class="media-directory-panel" role="navigation" aria-label="素材文件夹"><h2>素材文件夹</h2><button id="media-all-folders" type="button" aria-current="true">全部素材</button><p id="media-folder-state"></p><ul id="media-directory-tree"></ul></div><div class="media-browser"><p id="media-current-folder" class="media-folder-breadcrumb">全部素材</p><p class="media-hover-hint">悬停快速预览；点击视频大屏播放，关闭后可设置导入。</p><div id="media-results" class="media-results"></div><div class="media-pager"><button id="media-prev" type="button">上一页</button><span id="media-page"></span><button id="media-next" type="button">下一页</button></div></div>
+      <div class="media-inspector" role="complementary" aria-label="素材预览与导入">
+        <p id="media-selection-empty">悬停素材卡片即可预览。点击选择素材后，在这里设置导入。</p>
+        <div id="media-detail" hidden><div id="media-player" class="media-player"></div><h2 id="media-selected-name"></h2><p id="media-selected-kind"></p><p id="media-selected-path" class="media-selected-path"></p><p id="media-preview-note" role="status"></p><div class="media-preview-actions"><button type="button" id="media-large">大屏播放</button><button type="button" id="media-original">原始预览</button><button type="button" id="media-compatible">兼容预览</button></div></div>
+        <section class="media-target"><h3>导入达芬奇</h3><p id="media-connection" role="status">正在检测连接…</p><button type="button" id="media-connect">刷新工程与轨道</button>
+        <label>导入位置<select id="media-position"><option value="end">时间线末尾</option><option value="playhead">当前播放头（空闲位置）</option></select></label>
+        <div class="media-track-row"><label>视频轨道<select id="media-video-track" disabled></select></label><label>音频轨道<select id="media-audio-track" disabled></select></label></div>
+        <label>视频声音<select id="media-video-mode"><option value="both">画面与原声</option><option value="video">仅画面</option></select></label>
+        <button class="primary" type="button" id="media-import" disabled>导入达芬奇时间线</button><p>素材写入上方显示的时间线。图片默认 5 秒，目标位置有片段时会提示调整。</p><button id="media-unlock" type="button" hidden>检查未确认的导入</button></section>
+      </div></div>
+      <details class="media-folders"><summary>管理素材文件夹</summary><p>每行填写一个本机文件夹完整路径。首次沿用一库登记的目录，之后由工作台独立维护，无需启动一库。扫描只建立索引。</p><textarea id="media-roots-input" aria-label="素材文件夹路径" spellcheck="false"></textarea><button id="media-roots-save" type="button">保存目录并扫描</button></details>
+    </section>
+    <dialog id="media-unlock-dialog"><h2>检查导入结果</h2><p>上次导入结果未确认。请先在达芬奇检查素材是否已经写入；解除锁定后，再次点击导入会新增片段。</p><button id="media-unlock-cancel" type="button">继续保持锁定</button><button id="media-unlock-confirm" type="button">已检查时间线，解除锁定</button></dialog>
+    <section id="library-view" hidden>
+      <div class="detail-shortcuts"><button type="button" id="lib-palettes">导演色卡</button><button type="button" id="lib-documents">影视资料目录</button></div>
+      <div class="skills-controls"><input id="lib-search" type="search" aria-label="搜索本地资料" placeholder="搜索名称或分类"><select id="lib-kind" aria-label="资料类型" hidden><option value="research">方法与参考</option><option value="method">方法资料</option><option value="reference">参考资料</option><option value="novel">小说</option><option value="all">全部类型</option></select></div>
+      <p id="lib-note" class="study-note"></p><p id="lib-state" role="status"></p><div id="lib-results"></div>
+      <div class="detail-shortcuts" id="lib-pager"><button id="lib-prev">上一页</button><button id="lib-next">下一页</button></div>
+    </section>
+    <section id="skills-view" hidden aria-labelledby="skills-heading">
+      <div class="section-row"><div><h2 id="skills-heading">按用途浏览</h2></div><button id="skills-refresh" type="button">↻ 重新扫描</button></div>
+      <p class="skills-notice">真实读取本机技能文件，只展示，不运行。已安装、插件配置启用和仅有缓存分开标记；不表示工作台已经接入这些能力。</p>
+      <div id="skills-summary" class="skills-summary"></div>
+      <div id="skill-categories" aria-label="按技能用途筛选"></div>
+      <div class="skills-controls"><input id="skills-search" type="search" placeholder="搜索技能名称、用途或来源…" aria-label="搜索已安装技能"><select id="skills-source" aria-label="筛选技能来源"><option value="">全部来源</option><option value="codex">Codex 本地</option><option value="shared">共享 Skills</option><option value="plugin">插件</option></select><label><input id="skills-cache" type="checkbox">包含未确认缓存 / 已禁用插件</label></div>
+      <p id="skills-status" role="status" aria-live="polite">进入此页时读取本机目录。</p>
+      <div id="skills-list"></div>
+      <details class="skills-scope"><summary>扫描范围与限制</summary><p id="skills-scope-text"></p><ul id="skills-roots"></ul><p>名称相同的多个安装位置分别保留。显示来源文件及其真实链接目标，不推断缺失的下载来源。插件版本为本机文件版本，不证明当前会话加载版本。</p><ul id="skills-warnings"></ul></details>
+    </section>
+
+    <article id="reference-study" hidden></article>
+    <article id="bottle-study" hidden><p>开源版不包含工作室参考资料，请在灵感库添加自己的记录。</p><button id="bottle-back" type="button">返回灵感库</button></article>
+    <section class="workspace">
+      <div class="section-row"><h2 id="list-title">当前项目</h2><div class="tools"><input id="search" type="search" placeholder="搜索名称、备注或负责人…" aria-label="搜索记录"><select id="filter" aria-label="筛选状态"><option value="">全部状态</option><option>待开始</option><option>进行中</option><option>已完成</option><option>已归档</option></select></div></div>
+      <div id="inspiration-filters" class="inspiration-filters" aria-label="灵感分类" hidden></div>
+      <div id="records"></div>
+    </section>
+    <section class="boundary"><span>◈</span><div><strong>每一步都有交接标准。</strong><p>导演交脚本、分镜和素材需求；剪辑按时间码交粗剪；音乐记录情绪线、授权与混音；统筹核验素材授权、版本和最终交付。拍摄日期和客户确认未填写时保持待定。</p></div><button id="guide">工作规则 ↗</button></section>
+    <footer><span>BLACK MAMBA STUDIO</span><span id="save-state" role="status">只保存在当前浏览器</span></footer>
+  </main>
+
+  <dialog id="storyboard-dialog" aria-label="生成分镜图"></dialog>
+  <dialog id="palette-editor" aria-label="项目色彩参考"></dialog>
+  <dialog id="editor">
+    <form id="form">
+      <div class="modal-top"><div><div class="eyebrow">PRODUCTION RECORD</div><h2 id="modal-title">新建制作项目</h2></div><button type="button" class="close" id="close" aria-label="关闭">×</button></div>
+      <label>项目名称<input name="name" required maxlength="100" placeholder="例如：品牌短片 / 产品广告 / 纪录片"></label>
+      <div class="form-row"><label>分类<select name="type"><option>项目</option><option>官网</option><option>创意</option><option>智能体</option></select></label><label>总状态<select name="status"><option>待开始</option><option>进行中</option><option>已完成</option><option>已归档</option></select></label></div>
+      <div class="form-row" id="production-fields"><label>剧组阶段<select name="stage" id="stage-select"></select></label><label>当前交接负责人<input name="owner" maxlength="60" placeholder="导演 / 制片助手 / 剪辑"></label></div>
+      <div class="form-row"><label>客户 / 品牌<input name="client" maxlength="100" placeholder="待确认"></label><label>拍摄 / 交付日期<input name="due" type="date"></label></div>
+      <label>项目文件夹 / 参考链接（选填）<input name="url" type="url" placeholder="https://…"></label>
+      <label id="notes-label">项目简报<textarea name="notes" rows="4" maxlength="10000" placeholder="目标、受众、产品属性、平台规格和已经确认的创意方向。"></textarea></label>
+      <label>当前下一步 / 阻塞事项<textarea name="nextStep" rows="3" maxlength="2000" placeholder="未确定的信息标记待确认；写明下一件需要完成的事。"></textarea></label>
+      <p class="form-hint">未确定的信息留空并标记待确认。方案、脚本和分镜不等于已完成拍摄或成片。</p>
+      <div class="modal-actions"><button type="button" id="cancel">取消</button><button type="submit" class="primary">保存项目</button></div>
+    </form>
+  </dialog>
+  <dialog id="command-palette" class="command-palette" aria-labelledby="command-title">
+    <form method="dialog" id="command-form">
+      <div class="command-top"><div><div class="eyebrow">MAMBA COMMAND BUS / LOCAL</div><h2 id="command-title">调用工作台命令</h2></div><button type="submit" class="close" aria-label="关闭命令面板">×</button></div>
+      <label class="command-search"><span>输入命令</span><input id="command-search" type="search" autocomplete="off" placeholder="搜索：新建项目、剧组流程、备份…" /></label>
+      <div class="command-list" id="command-list">
+        <button type="button" class="command-item" data-command="new"><span class="command-glyph">＋</span><span><strong>新建制作项目</strong><small>创建一条新的剧组制作记录</small></span><kbd>Alt+1</kbd></button>
+        <button type="button" class="command-item" data-command="workflow"><span class="command-glyph">◈</span><span><strong>打开剧组流程</strong><small>制作流程 · 查看四步交接与验收清单</small></span><kbd>Alt+2</kbd></button>
+        <button type="button" class="command-item" data-command="projects"><span class="command-glyph">▦</span><span><strong>打开全部项目</strong><small>搜索项目、负责人和下一步</small></span><kbd>Alt+3</kbd></button>
+        <button type="button" class="command-item" data-command="backup"><span class="command-glyph">↗</span><span><strong>导出本机备份</strong><small>生成当前工作台 JSON 备份</small></span><kbd>Alt+4</kbd></button>
+      </div>
+      <div class="command-foot"><span><i></i> COMMAND BUS READY</span><span>ESC 关闭</span></div>
+    </form>
+  </dialog>
+  <dialog id="help"><h2>剧组交接规则</h2><ol><li>简报确认商业目标、受众、平台规格、预算和审批人。</li><li>导演锁定创意、脚本、带编号和时间段的分镜、素材需求与音乐情绪线。</li><li>拍摄前核对通告、器材、场地、产品还原、授权和测试镜头。</li><li>剪辑先整理素材，再交带时间码的粗剪；所有修改进入反馈清单。</li><li>音乐记录曲线和授权，完成混音后与画面一起总验。</li><li>按平台规格导出、复核、交付、归档工程和复盘。</li></ol><p>制片助手负责统筹；导演负责导演与创意，剪辑和音乐按项目协作。没有确认的日期、素材和客户意见保持待定。</p><button class="primary" id="help-close">关闭</button></dialog>
+  <div class="toast" id="toast" role="status"></div>
+  <dialog id="cloud-editor"><form id="cloud-form"><div class="modal-top"><h2 id="cloud-modal-title">新建本机任务</h2><button type="button" id="cloud-close" class="close" aria-label="关闭本机任务表单">×</button></div><p class="form-hint" id="cloud-form-info"></p><label>所属项目<select name="project"><option>广告创作</option><option>开放创新公司</option><option>日常管理</option></select></label><label>任务名称<input name="name" required maxlength="100"></label><label>任务说明<textarea name="notes" rows="4" maxlength="10000"></textarea></label><label id="cloud-status-label" hidden>任务状态<select name="status"><option>待开始</option><option>进行中</option><option>等待确认</option><option>已完成</option><option>已归档</option></select></label><label id="cloud-result-label" hidden>实际成果 / 结果链接<textarea name="result" rows="5" maxlength="15000"></textarea></label><p class="form-hint">只保存任务或回写结果，不启动 Codex。</p><div class="modal-actions"><button type="button" id="cloud-cancel">取消</button><button class="primary" type="submit" id="cloud-submit">保存到本机</button></div></form></dialog>
+  <dialog id="migration"><h2>迁移本地记录</h2><p class="cloud-explain">原记录保持不变；保存前可检查内容。</p><select id="migration-record" aria-label="选择本地记录"></select><div class="modal-actions"><button id="migration-cancel">取消</button><button id="migration-next" class="primary">检查迁移内容</button></div></dialog>
+  <script src="workflow.js"></script><script src="cover-art.js"></script><script src="production-records.js"></script><script src="workflow-handoffs.js"></script><script src="workflow-receipts-ui.js"></script><script src="creative-chat.js"></script><script src="materials-studio.js"></script><script src="postproduction.js"></script><script src="stage-content.js"></script><script src="storyboards.js"></script><script src="project-home.js"></script><script src="workflow-references.js"></script><script src="inspiration.js"></script><script src="local-library.js"></script><script src="media-library.js"></script><script src="app.js"></script><script src="cloud.js"></script><script src="skill-purposes.js"></script><script src="skills.js"></script>
+</body>
+</html>

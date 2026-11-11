@@ -1,0 +1,53 @@
+/* Project entry cards and an ordered production tree share the workbench palette. */
+.project-portals {display:grid;grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));gap:22px;padding:0 0 32px}
+.project-portal {display:block;position:relative;isolation:isolate;aspect-ratio:16/11;min-width:0;padding:0;overflow:hidden;text-align:left;border:1px solid #51483b;border-radius:16px;background:#24201a;color:var(--paper);box-shadow:0 12px 30px #0004;transition:transform .18s,border-color .18s}
+.project-portal>.card-art {position:absolute;inset:0;aspect-ratio:auto;z-index:-2}.project-portal>.card-art .art-label {top:14px;bottom:auto;right:14px}
+.project-portal:after {content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,#0001 15%,#0002 35%,#100d09dc 72%,#100d09f5)}
+.portal-copy {position:absolute;inset:auto 22px 22px;display:flex;align-items:flex-start;flex-direction:column;gap:12px;overflow-wrap:anywhere}
+.portal-stage {border:1px solid #c49a626b;background:#17130fe8;color:#f9d5a4;border-radius:20px;padding:5px 10px;font:12px/1.5 var(--sans)}
+.portal-copy h2 {margin:0;color:#fff4e5;font:600 clamp(23px,2.4vw,32px)/1.3 var(--serif);text-shadow:0 2px 7px #0008}
+.portal-open {font:13px/1.5 var(--sans);color:#ddc5a5}
+.project-portal:hover {transform:translateY(-3px);border-color:#c39962;background:#24201a;color:var(--paper)}
+.project-portal:focus-visible {outline:3px solid var(--accent);outline-offset:4px}
+#workflow-view .tree-root {position:relative;max-width:850px;margin:8px auto 0;border:1px solid #725635;border-radius:16px;background:linear-gradient(125deg,#30271b,#1c1b17);padding:20px;box-shadow:0 12px 26px #0003}
+.tree-root-card {display:flex;align-items:center;gap:20px;min-width:0}.tree-root-cover {width:112px;flex-shrink:0;overflow:hidden;border-radius:9px;border:1px solid #635039}.tree-root-cover .card-art {aspect-ratio:1}.tree-root-cover .art-label {display:none}
+.tree-root-info {flex:1;min-width:0}.tree-root-info h2 {margin:5px 0;font:600 25px/1.4 var(--serif);color:var(--paper);overflow-wrap:anywhere}.tree-root-info p {color:var(--muted);font-size:13px;margin:4px 0}
+.tree-root-actions {display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:255px}.tree-root-actions>.primary {width:100%}
+.tree-next {border-top:1px solid #534631;margin-top:16px;padding-top:12px}.tree-next p {margin:4px 0;color:#cbbda9;font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+#workflow-board.project-tree {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;padding:36px 0 0;margin:0 0 26px;position:relative;align-items:start}
+#workflow-board.project-tree:before {display:block;content:"";position:absolute;top:0;left:50%;height:18px;width:0;border:0;border-left:1px solid #7e6749}
+#workflow-board.project-tree[hidden] {display:none}
+.tree-branch {position:relative;min-width:0}.tree-branch:before {content:"";position:absolute;top:-18px;left:-10px;right:-10px;border-top:1px solid #7e6749}.tree-branch:first-child:before {left:50%}.tree-branch:last-child:before {right:50%}
+.tree-branch:after {content:"";position:absolute;top:-18px;left:50%;height:18px;border-left:1px solid #7e6749}
+#workflow-view button.tree-stage {display:grid;grid-template-columns:auto 1fr;align-items:center;gap:8px 10px;width:100%;min-height:98px;padding:16px;background:#211f1b;color:var(--paper);border:1px solid #50483c;border-radius:12px;text-align:left}
+#workflow-view button.tree-stage:hover {background:#30291f;border-color:#b58e58;color:var(--paper)}#workflow-view button.tree-stage[aria-current] {border-color:#dc9d4d;background:linear-gradient(125deg,#42301b,#2b241b);box-shadow:inset 0 2px #f0b063}
+.tree-stage-number {grid-row:1/3;color:#a59379;font:22px ui-monospace,monospace}#workflow-view button.tree-stage[aria-current] .tree-stage-number {color:#ffc677}
+#workflow-view button.tree-stage h3 {margin:0;color:var(--paper);font:600 18px/1.4 var(--sans)}.tree-state {font:12px/1.4 var(--sans);color:#bbae9c}#workflow-view button.tree-stage[aria-current] .tree-state {color:#ffd59b}#workflow-view button.tree-stage[data-blocked] .tree-state {color:#ffab91}
+.tree-children {position:relative;display:grid;gap:12px;margin:0 0 0 13px;padding:16px 0 0 16px;border-left:1px solid #514632}
+.tree-leaf {position:relative;min-width:0;padding:13px;background:#1b1a17;color:var(--paper);border:1px solid #3d3931;border-radius:9px;overflow-wrap:anywhere;margin:0;text-align:left}
+.tree-leaf:before {content:"";position:absolute;left:-17px;top:22px;width:16px;border-top:1px solid #514632}
+#workflow-view button.tree-entry {display:grid;gap:8px;width:100%;white-space:normal}#workflow-view button.tree-entry strong {color:#e9d6bb;font:500 14px/1.5 var(--sans)}#workflow-view button.tree-entry small {font:12px/1.6 var(--sans);color:#a99e8e}#workflow-view button.tree-entry:hover {background:#30271c;border-color:#927047}
+.tree-leaf summary {font:500 13px/1.6 var(--sans);cursor:pointer;color:#ddd1be}.tree-leaf .tree-muted {margin:9px 0 0;font:12px/1.6 var(--sans);color:#afa597}
+#workflow-view button.tree-record {display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:100%;padding:10px 0;margin:4px 0 0;border:0;border-top:1px solid #3d3931;border-radius:0;background:transparent;box-shadow:none;color:#e2d7c8;font:13px/1.5 var(--sans);text-align:left;overflow-wrap:anywhere}#workflow-view button.tree-record small {font-size:11px;color:#bda584}#workflow-view button.tree-record:hover {background:#2b251c;color:var(--paper)}
+.tree-check {display:flex;gap:8px;align-items:flex-start;margin-top:12px;font:12px/1.6 var(--sans);color:#c9bead}.tree-check input {width:14px;height:14px;flex-shrink:0;margin:3px 0 0;accent-color:var(--accent)}
+.tree-leaf>button:not(.tree-record) {font-size:12px;margin-top:10px;white-space:normal;max-width:100%}
+@media(min-width:1700px){.project-portals {grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:26px}.project-portal {aspect-ratio:16/10}}
+@media(max-width:1100px){#workflow-board.project-tree {grid-template-columns:1fr;padding:24px 0 0 22px;gap:22px}#workflow-board.project-tree:before {left:8px;top:0;bottom:0;height:auto}.tree-branch:before,.tree-branch:first-child:before,.tree-branch:last-child:before {left:-14px;right:auto;top:44px;width:14px}.tree-branch:after {display:none}.tree-children {grid-template-columns:repeat(2,minmax(0,1fr))}#workflow-view button.tree-stage {min-height:84px}.tree-stage-number {grid-row:1/3}.tree-root-card {flex-wrap:wrap}.tree-root-actions {max-width:none;width:100%;justify-content:flex-start}.tree-root-actions>.primary {width:auto}}
+@media(max-width:600px){.project-portals {gap:16px}.project-portal {aspect-ratio:16/11}.portal-copy {inset:auto 18px 18px;gap:10px}.portal-copy h2 {font-size:24px}.tree-root-cover {width:70px}.tree-root-info h2 {font-size:21px}.tree-root-card {gap:12px}#workflow-view .tree-root {padding:16px}.tree-children {grid-template-columns:1fr}#workflow-view button.tree-stage h3 {font-size:18px}.tree-root-actions button {font-size:12px}}
+@media(prefers-reduced-motion:reduce){.project-portal {transition:none}.project-portal:hover {transform:none}}
+
+#workflow-view .tree-root-actions button.primary {background:var(--accent);color:#201305;border:1px solid var(--accent);box-shadow:none}
+
+/* Each phase exposes one output; supporting material is disclosed on demand. */
+#stage-content.stage-focused {display:flex;flex-direction:column;gap:18px;max-width:1120px;margin:0 auto}
+#stage-content.stage-focused[hidden] {display:none}
+#stage-content.stage-focused>* {width:100%;min-width:0;box-sizing:border-box}
+.stage-outputs>button.primary {margin-bottom:12px}
+.output-summary {display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-top:1px solid var(--glass-edge)}
+.output-summary>div {display:grid;gap:7px;min-width:0}.output-summary strong {font-size:16px;overflow-wrap:anywhere}.output-summary small {color:var(--muted);font-size:12px}.output-summary>button {flex-shrink:0}
+#stage-content .stage-support {margin-top:6px;color:var(--muted)}
+.stage-support>.phase-fold {margin:14px 0}.stage-support>.phase-fold>summary {font-size:14px}
+.output-dialog {width:min(840px,calc(100vw - 40px));max-height:85vh;overflow:auto;box-sizing:border-box}
+.output-dialog .stage-record {border:0;padding:0}.output-dialog .stage-text {white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.9}
+.output-dialog .modal-actions {position:sticky;bottom:-1px;padding:14px 0;background:var(--panel,#211f1b);flex-wrap:wrap}
+#workflow-view .tree-children {grid-template-columns:1fr}

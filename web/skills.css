@@ -1,0 +1,28 @@
+/* Match the workbench's existing dark cyan design, without implying execution. */
+#skills-view { margin-bottom: 32px; }
+.skills-notice { max-width: 90ch; line-height: 1.7; color: var(--muted, #94a3b8); }
+.skills-summary { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:22px 0; }
+.skill-stat { border:1px solid #284150;background:#0d1520;padding:18px 20px;border-radius:12px;display:flex;flex-direction:column;gap:8px; }
+.skill-stat strong { font-size:28px;color:#e6f5fc;font-variant-numeric:tabular-nums; }
+.skill-stat span,.skill-meta { color:#99b1c3;font-size:12px; }
+.skills-controls { display:flex;flex-wrap:wrap;gap:12px;align-items:center; }
+.skills-controls input[type=search] { min-width:230px;flex:1; }
+.skills-controls label {display:flex;flex-direction:row;align-items:center;gap:8px;font-size:12px;color:#a9bac9;margin:0; }
+.skills-controls input[type=checkbox] { width:16px;height:16px; }
+#skills-status {color:#9aafbe;font-size:12px;margin:16px 0;}
+#skills-list {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start;}
+.skill-card {padding:20px;border:1px solid #253d4a;border-radius:12px;background:#0d1520;min-width:0;}
+.skill-card-head {display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:start;}
+.skill-card h3 {font-size:16px;line-height:1.4;margin:0;overflow-wrap:anywhere;}
+.skill-state {border:1px solid #344b59;color:#a4c9d3;border-radius:5px;font-size:10px;padding:4px 7px;white-space:nowrap;}
+.skill-state.cached,.skill-state.disabled {color:#bca989;border-color:#594b37;}
+.skill-description {font-size:12px;line-height:1.75;color:#aebecd;margin:13px 0;overflow-wrap:anywhere;}
+.skill-meta {display:flex;gap:14px;flex-wrap:wrap;line-height:1.6;}
+.skill-source {border-top:1px solid #263744;margin-top:15px;padding-top:12px;font-size:12px;color:#99b3c1;}
+.skill-source summary,.skills-scope summary {cursor:pointer;color:#c3d5df;}
+.skill-source p,.skills-scope li {overflow-wrap:anywhere;line-height:1.7;}
+.skill-source a {color:#71d3de;}
+.skills-scope {margin-top:24px;border:1px solid #263e4b;border-radius:12px;padding:18px;font-size:12px;color:#96adbd;line-height:1.8;}
+.skill-warning {color:#d4b888;}
+@media(max-width:1100px){#skills-list{grid-template-columns:1fr}.skill-card-head{gap:10px}}
+@media(max-width:640px){.skills-summary{grid-template-columns:1fr}.skill-stat{flex-direction:row;align-items:center;gap:16px}.skills-controls{align-items:stretch;flex-direction:column}.skills-controls input[type=search]{min-width:0}}
