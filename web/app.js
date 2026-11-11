@@ -550,3 +550,5 @@ $('#import').onchange = async event => {
 
 setupHome();
 window.addEventListener('DOMContentLoaded',restoreRoute,{once:true});
+
+if(!/Mac|iPhone|iPad/.test(navigator.platform))document.querySelector('#command-trigger kbd').textContent='Ctrl+K';

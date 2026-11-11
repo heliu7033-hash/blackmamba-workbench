@@ -12,7 +12,7 @@ const root=path.join(temp,'素材'), data=path.join(temp,'data');fs.mkdirSync(ro
 fs.writeFileSync(path.join(data,'media-library.json'),JSON.stringify({roots:[root,root2]}));
 fs.writeFileSync(path.join(root,'雨声 100%.wav'),'0123456789');
 fs.writeFileSync(path.join(root,'city.mp4'),'0123456789');fs.writeFileSync(path.join(root,'ignored.txt'),'secret');
-fs.symlinkSync('/etc',path.join(root,'escape'));let calls=0,fail=false,lastImportedPath='';
+fs.symlinkSync(os.tmpdir(),path.join(root,'escape'),'junction');let calls=0,fail=false,lastImportedPath='';
 fs.writeFileSync(path.join(data,'media-names.zh.json'),JSON.stringify({version:1,entries:[{id:createHash('sha256').update(path.join(root,'city.mp4')).digest('hex'),original:'city.mp4',display:'城市风光 100%_01.mp4'}]}));
 let library=createMediaLibrary(data,{bridge:async input=>{if(input.action==='status')return{ok:true};calls++;lastImportedPath=input.path;await new Promise(r=>setTimeout(r,40));if(fail)throw Object.assign(Error('unknown outcome'),{status:503});return{ok:true,items:[{name:'test'}]};}});
 const server=http.createServer((req,res)=>library.request(req,res,new URL(req.url,'http://localhost')));await new Promise(r=>server.listen(0,'127.0.0.1',r));

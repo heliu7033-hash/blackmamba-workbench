@@ -27,7 +27,7 @@ cp skills/studio-storyboards/SKILL.md "$app/Resources/skills/studio-storyboards/
 cp skills/studio-storyboards/scripts/* "$app/Resources/skills/studio-storyboards/scripts/"
 mkdir -p "$app/Resources/scripts"
 cp scripts/resolve-media.py "$app/Resources/scripts/"
-cp production-materials.mjs creative-chat.mjs creative-providers.mjs server.mjs media-library.mjs storyboards.mjs skills-inventory.mjs local-library.mjs "$app/Resources/"
+cp runtime-platform.mjs production-materials.mjs creative-chat.mjs creative-providers.mjs server.mjs media-library.mjs storyboards.mjs skills-inventory.mjs local-library.mjs "$app/Resources/"
 cp local-dist/worker.mjs "$app/Resources/local-dist/"
 cp drizzle/0000_groovy_starjammers.sql "$app/Resources/drizzle/"
 node -e 'require("fs").writeFileSync(process.argv[1], JSON.stringify({node:process.execPath, data:require("path").resolve(process.argv[2])}))' "$app/Resources/runtime.json" "$data_dir"

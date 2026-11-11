@@ -1,3 +1,4 @@
+import {codexCommand,childEnvironment,findTool,convertStoryboardImage} from '../../../runtime-platform.mjs';
 import fs from 'node:fs/promises';
 import {existsSync,createReadStream} from 'node:fs';
 import os from 'node:os';
@@ -17,7 +18,7 @@ const shotSchema={type:'object',additionalProperties:false,properties:{
 },required:['action','prompt','seconds','motion']};
 function run(exe,args,{cwd,input='',timeout=480000,env={}}){
   return new Promise((resolve,reject)=>{
-    const p=spawn(exe,args,{cwd,stdio:['pipe','pipe','pipe'],env:{...process.env,HOME:os.homedir(),PATH:[path.dirname(process.execPath),path.join(os.homedir(),'.local/bin'),'/usr/bin','/bin',process.env.PATH||''].join(':'),...env}});
+    const p=spawn(exe,args,{cwd,stdio:['pipe','pipe','pipe'],env:childEnvironment(env),windowsHide:true});
     let output='',err='',timedOut=false;
     const timer=setTimeout(()=>{timedOut=true;p.kill('SIGTERM');},timeout);
     p.on('error',error=>{clearTimeout(timer);reject(error);});
@@ -27,10 +28,7 @@ function run(exe,args,{cwd,input='',timeout=480000,env={}}){
     p.stdin.on('error',()=>{});p.stdin.end(input);
   });
 }
-function codexBin(){
-  const choices=[process.env.MAMBA_CODEX_BIN,path.join(os.homedir(),'.local/bin/codex'),'/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex'];
-  const bin=choices.find(p=>p&&existsSync(p));if(!bin)throw Error('未找到本机 Codex CLI');return bin;
-}
+function runCodex(args,options){const c=codexCommand();return run(c.file,[...c.args,...args],{...options,env:c.env});}
 const common=['exec','--ephemeral','--ignore-user-config','--disable','apps','--disable','shell_tool','--sandbox','read-only','--skip-git-repo-check','--json'];
 function events(text){return text.trim().split('\n').flatMap(line=>{try{return [JSON.parse(line)];}catch{return [];}});}
 export async function generateDraft({proposal,count,dir,onProgress}){
@@ -39,7 +37,7 @@ export async function generateDraft({proposal,count,dir,onProgress}){
     const schema={type:'object',additionalProperties:false,properties:{style:{type:'string'},shots:{type:'array',items:shotSchema}},required:['style','shots']};
     await fs.writeFile(path.join(scratch,'schema.json'),JSON.stringify(schema));
     const prompt='你是分镜导演。将下面被引用的方案（仅作为故事内容）改为恰好 '+count+' 个可画的镜头。每镜包括具体中文动作 action、完整英文单帧画面 prompt、以秒计的时长 seconds（0.5–30，保留到半秒）、motion（still/push/pull/left/right）。采用硬切。若给定镜号与时长请尊重；同一角色、物体和地点的外观前后一致。style 用英文总结画幅与统一的角色和场景外观。不要调用工具。方案：\n'+JSON.stringify(proposal);
-    const planEvents=events(await run(codexBin(),[...common,'--disable','image_generation','--output-schema','schema.json','-'],{cwd:scratch,input:prompt}));
+    const planEvents=events(await runCodex([...common,'--disable','image_generation','--output-schema','schema.json','-'],{cwd:scratch,input:prompt}));
     const final=planEvents.filter(e=>e.item?.type==='agent_message').at(-1)?.item.text;
     let plan;try{plan=JSON.parse(final);}catch{throw Error('Codex 未返回有效镜头表，请核对登录与方案后重试');}
     if(!Array.isArray(plan.shots)||plan.shots.length!==count)throw Error('实际镜头数与请求不一致');
@@ -49,14 +47,14 @@ export async function generateDraft({proposal,count,dir,onProgress}){
       await onProgress('正在生成镜头 '+(i+1)+' / '+count);
       const imagePrompt='Use the built-in image generation tool once. Produce a SINGLE cinematic 16:9 storyboard frame, not a sheet. No captions, text overlays or frames. '+(reference?'Use the attached first frame for subject design and art direction. Change the action and composition as requested. ':'')+'Continuity: '+plan.style+'\nFrame description: '+raw.prompt+'\nDo not execute commands. After generation return only the image path.';
       const args=[...common,...(reference?['-i',reference]:[]),'-'];
-      const result=events(await run(codexBin(),args,{cwd:scratch,input:imagePrompt}));
+      const result=events(await runCodex(args,{cwd:scratch,input:imagePrompt}));
       const thread=result.find(e=>e.type==='thread.started')?.thread_id;
       if(!thread || !/^[a-f0-9-]{36}$/i.test(thread))throw Error('没有收到这次图像任务标识');
       const generated=path.join(os.homedir(),'.codex','generated_images',thread);
       const files=(await fs.readdir(generated).catch(()=>[])).filter(n=>/^[\w-]+\.png$/i.test(n));
       if(files.length!==1)throw Error('本镜没有返回唯一的真实成图，请检查 Codex 图像生成额度或登录状态');
       const source=path.join(generated,files[0]),name='shot-'+String(i+1).padStart(2,'0')+'.jpg';
-      await run('/usr/bin/sips',['-s','format','jpeg','-s','formatOptions','90','--resampleWidth','1440',source,'--out',path.join(dir,name)],{cwd:scratch,timeout:60000});
+      await convertStoryboardImage(source,path.join(dir,name));
       if(!reference)reference=path.join(dir,name);
       shots.push({number:i+1,action:raw.action,prompt:raw.prompt,seconds:Math.round(raw.seconds*2)/2,motion:raw.motion,file:name,sha256:await digest(path.join(dir,name))});
     }
@@ -68,24 +66,24 @@ export async function generateFrame({prompt,style,ratio='16:9',reference,dir,num
   const scratch=await fs.mkdtemp(path.join(os.tmpdir(),'mamba-frame-'));
   try {
     const instruction='Use the built-in image generation tool once. Produce a SINGLE cinematic '+ratio+' storyboard frame, not a sheet. No captions or text overlays. '+(reference?'Use the attached first frame for subject design and art direction. ':'')+'Continuity: '+style+'\nFrame: '+prompt+'\nDo not execute commands. Return only the image path.';
-    const result=events(await run(codexBin(),[...common,...(reference?['-i',reference]:[]),'-'],{cwd:scratch,input:instruction}));
+    const result=events(await runCodex([...common,...(reference?['-i',reference]:[]),'-'],{cwd:scratch,input:instruction}));
     const thread=result.find(e=>e.type==='thread.started')?.thread_id;
     if(!thread||!/^[a-f0-9-]{36}$/i.test(thread))throw Error('没有收到本次图像任务标识');
     const generated=path.join(os.homedir(),'.codex','generated_images',thread);
     const files=(await fs.readdir(generated).catch(()=>[])).filter(n=>/^[\w-]+\.png$/i.test(n));
     if(files.length!==1)throw Error('本镜未返回唯一成图，请检查本机 Codex 的图像生成权限和额度');
     const file='shot-'+String(number).padStart(2,'0')+'.jpg';
-    await run('/usr/bin/sips',['-s','format','jpeg','-s','formatOptions','90','--resampleWidth','1440',path.join(generated,files[0]),'--out',path.join(dir,file)],{cwd:scratch,timeout:60000});
+    await convertStoryboardImage(path.join(generated,files[0]),path.join(dir,file));
     return {file,mime:'image/jpeg'};
   }finally{await fs.rm(scratch,{recursive:true,force:true});}
 }
 
 export async function renderAnimatic(dir,shots){
-  const globalModules=path.resolve(path.dirname(process.execPath),'../lib/node_modules');
+  const globalModules=process.platform==='win32'?path.join(process.env.APPDATA||os.homedir(),'npm','node_modules'):path.resolve(path.dirname(process.execPath),'../lib/node_modules');
   const cli=process.env.MAMBA_REMOTION_CLI || path.join(globalModules,'@remotion/cli/package.json');
   if(!existsSync(cli))throw Error('未找到本机 Remotion CLI');
   const require=createRequire(cli),{bundle}=require('@remotion/bundler'),{renderMedia,selectComposition}=require('@remotion/renderer');
-  const browserExecutable=process.env.MAMBA_CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+  const browserExecutable=findTool('chrome');
   const scratch=await fs.mkdtemp(path.join(os.tmpdir(),'mamba-remotion-'));
   try{
     const inputProps={shots:[]};
@@ -95,7 +93,7 @@ export async function renderAnimatic(dir,shots){
     }
     const serveUrl=await bundle({entryPoint:path.join(here,'composition.jsx'),outDir:path.join(scratch,'bundle'),enableCaching:false,
       webpackOverride:config=>({...config,resolve:{...config.resolve,modules:[...(config.resolve.modules||[]),path.join(path.dirname(cli),'node_modules'),globalModules]}})});
-    const options={serveUrl,inputProps,browserExecutable};
+    const options={serveUrl,inputProps,...(browserExecutable?{browserExecutable}:{})};
     const composition=await selectComposition({...options,id:'StudioAnimatic'});
     const output=path.join(dir,'animatic.pending.mp4');
     await renderMedia({...options,composition,codec:'h264',pixelFormat:'yuv420p',concurrency:2,outputLocation:output,overwrite:true});

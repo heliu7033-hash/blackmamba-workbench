@@ -93,7 +93,7 @@
         <label>视频声音<select id="media-video-mode"><option value="both">画面与原声</option><option value="video">仅画面</option></select></label>
         <button class="primary" type="button" id="media-import" disabled>导入达芬奇时间线</button><p>素材写入上方显示的时间线。图片默认 5 秒，目标位置有片段时会提示调整。</p><button id="media-unlock" type="button" hidden>检查未确认的导入</button></section>
       </div></div>
-      <details class="media-folders"><summary>管理素材文件夹</summary><p>每行填写一个本机文件夹完整路径。首次沿用一库登记的目录，之后由工作台独立维护，无需启动一库。扫描只建立索引。</p><textarea id="media-roots-input" aria-label="素材文件夹路径" spellcheck="false"></textarea><button id="media-roots-save" type="button">保存目录并扫描</button></details>
+      <details class="media-folders"><summary>管理素材文件夹</summary><p>每行填写一个本机文件夹完整路径。首次沿用一库登记的目录，之后由工作台独立维护，无需启动一库。扫描只建立索引。</p><textarea id="media-roots-input" aria-label="素材文件夹路径" spellcheck="false"></textarea><button id="media-roots-pick" type="button" hidden>选择文件夹…</button><button id="media-roots-save" type="button">保存目录并扫描</button></details>
     </section>
     <dialog id="media-unlock-dialog"><h2>检查导入结果</h2><p>上次导入结果未确认。请先在达芬奇检查素材是否已经写入；解除锁定后，再次点击导入会新增片段。</p><button id="media-unlock-cancel" type="button">继续保持锁定</button><button id="media-unlock-confirm" type="button">已检查时间线，解除锁定</button></dialog>
     <section id="library-view" hidden>
