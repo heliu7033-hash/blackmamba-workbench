@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+const context = {window:{}};
+vm.runInNewContext(fs.readFileSync('web/workflow.js', 'utf8'), context);
+const {stages, roles} = context.window.MAMBA_WORKFLOW;
+assert.equal(stages.length, 4);
+assert.deepEqual(Array.from(stages,s=>s.name),["创意方案","素材制作","剪辑后期","交付归档"]);
+assert.equal(Array.from(stages).flatMap(stage => Array.from(stage.sections)).join(','), 'brief,creative,preproduction,production,edit,finish,sound,delivery');
+assert.ok(stages.every(stage => stage.name && stage.handoff && stage.checks.length >= 4));
+assert.equal(Array.from(roles, role => role.name).join(','), '制片助手,导演,剪辑协作,音乐协作');
+const html = fs.readFileSync('web/index.html', 'utf8');
+const app = fs.readFileSync('web/app.js', 'utf8');
+for (const id of ['workflow-view','role-strip','workflow-board','stage-select','project-portals','command-palette','command-trigger','command-search']) assert.ok(html.includes(`id="${id}"`));
+for (const command of ['new','workflow','projects','backup']) assert.match(html, new RegExp(`data-command="${command}"`));
+for (const shortcut of ['Alt+1', 'Alt+2', 'Alt+3', 'Alt+4']) assert.ok(html.includes(shortcut));
+assert.doesNotMatch(html, /⌘[NWPB]/);
+assert.match(html, /workflow\.js"><\/script>/);
+console.log('PASS: four production stages with all eight legacy sections, handoffs, crew roles, and workflow UI hooks');

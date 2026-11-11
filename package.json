@@ -1,0 +1,30 @@
+{
+  "name": "blackmamba-workbench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npm run build:local",
+    "build:local": "node scripts/build-local.mjs",
+    "test": "node scripts/test-skills.mjs && node scripts/test-skills-ui.mjs && node scripts/test-cloud-preflight.mjs && node scripts/test-workflow.mjs && node scripts/test-project-tree.mjs && node scripts/test-production-records.mjs && node scripts/test-postproduction.mjs && node scripts/test-workflow-handoffs.mjs && node scripts/test-production-materials.mjs && node scripts/test-stage-references.mjs && node scripts/build-local.mjs && node scripts/test-local.mjs && python3 scripts/test-server.py && node scripts/test-mcp.mjs && node scripts/test-creative.mjs && node scripts/test-media.mjs && python3 scripts/test-resolve-media.py",
+    "db:generate": "drizzle-kit generate",
+    "build:cloud": "node scripts/build.mjs",
+    "build:mac": "bash desktop/build.sh",
+    "test:mcp": "node scripts/test-mcp.mjs",
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.2"
+  },
+  "devDependencies": {
+    "drizzle-kit": "0.31.10"
+  },
+  "license": "MIT",
+  "description": "Local-first creative and video production workbench",
+  "engines": {
+    "node": ">=24"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/heliu7033-hash/blackmamba-workbench.git"
+  }
+}
