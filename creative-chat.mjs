@@ -37,7 +37,7 @@ export function createCreativeChat(data,{provider=runProvider,namespace='creativ
   const agents=async()=>[{id:'codex-local',name:'本机 Codex',kind:'codex',available:!!codexBinary()},...await readJSON(configFile,[])];
   const fileFor=id=>path.join(root,'projects',createHash('sha256').update(id).digest('hex')+'.json');
   const fresh=id=>({projectId:id,revision:0,phase:0,status:'idle',messages:[],answers:[],pending:null,draft:null,agentId:'codex-local'});
-  async function state(id){const s=await readJSON(fileFor(id),fresh(id));if(s.status==='running'&&!active.has(id)){s.status='failed';s.error='上次生成被中断，已保留对话，可重试本轮。';}return s;}
+  async function state(id){const s=await readJSON(fileFor(id),fresh(id));if(active.has(id)){s.status='running';return s;}if(s.status==='running'){s.status='failed';s.error='上次生成被中断，已保留对话，可重试本轮。';}return s;}
   async function perform(id,s,agent,job){
     try {
       const schema=job.kind==='draft'?draftSchema:questionSchema;
@@ -104,8 +104,9 @@ export function createCreativeChat(data,{provider=runProvider,namespace='creativ
       }else fail(400,'未知对话操作。');
       s.agentId=agent.id;s.requestId=input.requestId;s.revision++;s.updatedAt=Date.now();
       if(job){s.status='running';s.job=job;delete s.error;}
-      await saveJSON(fileFor(id),s);
-      if(job){active.add(id);void perform(id,s,agent,job).catch(()=>{});}
+      if(job)active.add(id);
+      try{await saveJSON(fileFor(id),s);}catch(e){if(job)active.delete(id);throw e;}
+      if(job)void perform(id,s,agent,job).catch(()=>{});
       return s;
     }finally{locks.delete(id);}
   }
