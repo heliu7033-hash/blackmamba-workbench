@@ -35,7 +35,7 @@ try {
   assert.equal(result.entries.find(x=>x.name==='cached').state,'cached');
   assert.equal(result.entries.filter(x=>x.name==='alpha').length,2);
   assert.equal(result.entries.find(x=>x.name==='alpha'&&x.group==='shared').provenance.label,'example/repo');
-  assert(result.entries.find(x=>x.name==='linked').realPath.endsWith('.dsh/skills/linked/SKILL.md'));
+  assert(result.entries.find(x=>x.name==='linked').realPath.endsWith(path.join('.dsh','skills','linked','SKILL.md')));
   assert(!JSON.stringify(result).includes('PRIVATE_SKILL_BODY_DO_NOT_EXPOSE'));
   assert(!JSON.stringify(result).includes('not-a-skill-root'));
   assert(!JSON.stringify(result).includes('DO_NOT_EXPOSE'));
