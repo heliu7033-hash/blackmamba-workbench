@@ -11,6 +11,17 @@ let isolated = testing || preview
 let runMarker = isolated ? UUID().uuidString : nil
 let prefs = testing ? UserDefaults(suiteName: "studio.blackmamba.ui-check")! : UserDefaults.standard
 
+// Portable releases resolve their runtime inside the bundle and data for the current user.
+func runtimePaths(_ resources: URL) throws -> (node: URL, data: String) {
+    let config = try JSONDecoder().decode([String:String].self, from:Data(contentsOf:resources.appendingPathComponent("runtime.json")))
+    let portable = config["portable"] == "true"
+    let node = portable ? resources.appendingPathComponent("runtime/node") : URL(fileURLWithPath:config["node"] ?? "")
+    let folder = portable ? FileManager.default.urls(for:.applicationSupportDirectory,in:.userDomainMask)[0].appendingPathComponent("Black Mamba Workbench/workspace").path : config["data"]
+    guard let data = testing ? ProcessInfo.processInfo.environment["MAMBA_TEST_DIR"] : folder, !data.isEmpty,
+          portable || !(config["node"] ?? "").isEmpty else { throw CocoaError(.fileReadCorruptFile) }
+    return (node,data)
+}
+
 func fit(_ point: NSPoint, size: NSSize, in frame: NSRect) -> NSPoint {
     NSPoint(x: max(frame.minX, min(point.x, frame.maxX - size.width)),
             y: max(frame.minY, min(point.y, frame.maxY - size.height)))
@@ -204,13 +215,10 @@ final class Desk: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDel
     func startServer() {
         guard child?.isRunning != true, let resources = Bundle.main.resourceURL else { return }
         do {
-            let config = try JSONDecoder().decode([String:String].self,from:Data(contentsOf:resources.appendingPathComponent("runtime.json")))
-            guard let node = config["node"], let folder = config["data"] else { return }
-            let p = Process(); p.executableURL = URL(fileURLWithPath:node); p.arguments = [resources.appendingPathComponent("server.mjs").path]
-            let dataDir = testing ? ProcessInfo.processInfo.environment["MAMBA_TEST_DIR"] : folder
-            guard let dir = dataDir, !dir.isEmpty else { return }
-            p.environment = ["MAMBA_PORT":String(base.port!),"MAMBA_DATA_DIR":dir]
-            for key in ["MAMBA_CODEX_BIN", "MAMBA_REMOTION_CLI", "MAMBA_CHROME"] {
+            let runtime = try runtimePaths(resources)
+            let p = Process(); p.executableURL = runtime.node; p.arguments = [resources.appendingPathComponent("server.mjs").path]
+            p.environment = ["MAMBA_PORT":String(base.port!),"MAMBA_DATA_DIR":runtime.data]
+            for key in ["PATH", "HOME", "TMPDIR", "MAMBA_CODEX_BIN", "MAMBA_REMOTION_CLI", "MAMBA_CHROME", "MAMBA_FFMPEG", "MAMBA_FFPROBE", "MAMBA_PYTHON3", "RESOLVE_SCRIPT_API"] {
                 if let value = ProcessInfo.processInfo.environment[key] { p.environment?[key] = value }
             }
             for (key, value) in ProcessInfo.processInfo.environment where key.hasPrefix("MAMBA_MCP_") {
@@ -333,9 +341,8 @@ final class Desk: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDel
     func libraryFile(_ url: URL) -> LibraryDocument? {
         guard url.pathComponents.count == 3, url.pathComponents[1] == "local-document", url.query == nil, url.fragment == nil,
               let resource = Bundle.main.resourceURL,
-              let runtime = try? JSONDecoder().decode([String:String].self, from: Data(contentsOf: resource.appendingPathComponent("runtime.json"))),
-              let data = testing ? ProcessInfo.processInfo.environment["MAMBA_TEST_DIR"] : runtime["data"],
-              let index = try? JSONDecoder().decode(LibraryMap.self, from: Data(contentsOf: URL(fileURLWithPath: data).appendingPathComponent("local-library/open.json"))),
+              let runtime = try? runtimePaths(resource),
+              let index = try? JSONDecoder().decode(LibraryMap.self, from: Data(contentsOf: URL(fileURLWithPath: runtime.data).appendingPathComponent("local-library/open.json"))),
               let relative = index.paths[url.lastPathComponent], !relative.hasPrefix("/"),
               !relative.split(separator: "/").contains(where: { $0 == ".." || $0.hasPrefix("90-隔离") }) else { return nil }
         let root = URL(fileURLWithPath: index.root)
@@ -404,7 +411,7 @@ final class Desk: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDel
         func check(_ condition: Bool, _ name: String) {
             if !condition { problems.append(name) }
         }
-        func waitFor(_ condition: @escaping () -> Bool, then continuation: @escaping () -> Void, attempts: Int = 100) {
+        func waitFor(_ condition: @escaping () -> Bool, then continuation: @escaping () -> Void, attempts: Int = 300) {
             if condition() || attempts == 0 { continuation(); return }
             DispatchQueue.main.asyncAfter(deadline:.now()+0.1) { waitFor(condition,then:continuation,attempts:attempts-1) }
         }

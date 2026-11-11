@@ -43,7 +43,9 @@ npm run build:mac
 open build/黑曼巴工作台.app
 ```
 
-这是本机构建、临时签名的应用，使用构建时的 Node 路径与数据目录；不是可任意复制到其他电脑的独立安装包。开源版使用代码生成的简单图标，不包含工作室图片。尚未发布经 Apple 公证的安装包。
+上述命令供本机开发，使用构建时的 Node 路径与数据目录。可转发的安装包使用 `bash scripts/package-mac.sh` 构建：需要已签名的通用 Node 24+ 可执行文件（默认 PATH 中的 node，也可指定 MAMBA_NODE_BINARY）。脚本打包 Apple 芯片与 Intel 原生外壳、自带 Node 及其许可证，并清空本地封面索引。产物位于 build/mac-share/，适用于 macOS 13+。
+
+安装者将 DMG 内的应用拖入 Applications。运行数据位于当前用户 Library/Application Support/Black Mamba Workbench/workspace，项目记录另存于应用 WebKit 存储。应用是临时签名的测试版，尚未获得 Apple 开发者签名和公证。首次运行可能需要在系统设置「隐私与安全性」允许打开。
 
 ## 智能体与可选工具
 

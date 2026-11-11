@@ -12,6 +12,10 @@ import time
 root = Path(__file__).resolve().parents[1]
 bundle = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else root / "build/黑曼巴工作台.app"
 binary = bundle / "Contents/MacOS/Mamba"
+architecture = sys.argv[2] if len(sys.argv) > 2 else None
+if architecture not in (None, "arm64", "x86_64"):
+    raise ValueError("Unsupported test architecture")
+command = (["/usr/bin/arch", "-" + architecture] if architecture else []) + [str(binary), "--ui-check"]
 with tempfile.TemporaryDirectory(prefix="mamba-desktop-") as directory:
     folder = Path(directory) / "local-library"
     folder.mkdir()
@@ -27,7 +31,7 @@ with tempfile.TemporaryDirectory(prefix="mamba-desktop-") as directory:
         # TCP TIME_WAIT after a WebKit request does not indicate a listener.
         with socket.socket() as probe:
             assert probe.connect_ex(("127.0.0.1", 18773)) != 0, "test port already in use"
-        subprocess.run([str(binary), "--ui-check"], check=True, timeout=30,
+        subprocess.run(command, check=True, timeout=90,
                        env={**os.environ, "MAMBA_TEST_DIR": directory})
         for _ in range(40):
             with socket.socket() as probe:
