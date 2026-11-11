@@ -1,0 +1,75 @@
+name: Windows desktop
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+permissions:
+  contents: read
+env:
+  PYTHONUTF8: '1'
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install media tools
+        run: choco install ffmpeg --no-progress -y
+      - run: npm ci
+      - name: Ensure Electron runtime
+        run: node node_modules/electron/install.js
+      - run: python scripts/check-public-source.py
+      - run: npm test
+      - name: Build x64 installer
+        run: npm run build:win
+      - name: Install, launch, import, handoff and restart
+        shell: pwsh
+        run: ./scripts/smoke-windows.ps1
+      - name: Package checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem build/windows/*-win-x64.exe | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)" | Set-Content build/windows/SHA256SUMS.txt -Encoding utf8
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: |
+            build/windows/*-win-x64.exe
+            build/windows/SHA256SUMS.txt
+            build/windows/write.json
+            build/windows/read.json
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: windows-diagnostics
+          path: |
+            ${{ runner.temp }}/Mamba 中文验收/验收数据/error.txt
+            build/windows/builder-debug.yml
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-x64
+          path: release
+      - name: Publish tested installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" release/* --title "Windows $TAG" --prerelease --notes "Windows x64 preview. Installer, desktop workflow and restart tested on Windows CI. Real Codex generation and Resolve integration need user-installed tools and separate validation. Unsigned installer; see docs/WINDOWS.md."

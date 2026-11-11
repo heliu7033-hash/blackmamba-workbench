@@ -1,0 +1,11 @@
+{
+  "appId": "studio.blackmamba.workbench",
+  "productName": "Black Mamba Workbench",
+  "directories": {"app": "build/electron-app", "output": "build/windows"},
+  "files": ["**/*"],
+  "asar": false,
+  "npmRebuild": false,
+  "win": {"target": [{"target": "nsis", "arch": ["x64"]}], "artifactName": "Black-Mamba-Workbench-win-x64.exe"},
+  "nsis": {"oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true, "runAfterFinish": false, "deleteAppDataOnUninstall": false},
+  "publish": null
+}

@@ -1,20 +1,19 @@
+import {codexCommand} from './runtime-platform.mjs';
 import fs from 'node:fs/promises';
 import {existsSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
 
-export function codexBinary() {
-  return [process.env.MAMBA_CODEX_BIN,path.join(os.homedir(),'.local/bin/codex'),'/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex'].find(p=>p&&existsSync(p));
-}
+export function codexBinary(){try{return codexCommand().file;}catch{return undefined;}}
 export async function runCodex(prompt,schema) {
-  const bin=codexBinary();if(!bin)throw Error('未找到本机 Codex CLI，请先安装并登录。');
+  const command=codexCommand();
   const cwd=await fs.mkdtemp(path.join(os.tmpdir(),'mamba-copy-'));
   try {
     await fs.writeFile(path.join(cwd,'schema.json'),JSON.stringify(schema));
     const args=['exec','--ephemeral','--ignore-user-config','--disable','apps','--disable','shell_tool','--disable','image_generation','--sandbox','read-only','--skip-git-repo-check','--output-schema','schema.json','--json','-'];
     const output=await new Promise((resolve,reject)=>{
-      const child=spawn(bin,args,{cwd,stdio:['pipe','pipe','pipe'],env:{...process.env,HOME:os.homedir(),PATH:[path.dirname(process.execPath),path.join(os.homedir(),'.local/bin'),'/usr/bin','/bin'].join(':')}});
+      const child=spawn(command.file,[...command.args,...args],{cwd,stdio:['pipe','pipe','pipe'],env:command.env,windowsHide:true});
       let out='',err='',timedOut=false;
       const timer=setTimeout(()=>{timedOut=true;child.kill('SIGTERM');},180000);
       const force=setTimeout(()=>child.kill('SIGKILL'),185000);

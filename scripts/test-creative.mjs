@@ -37,6 +37,7 @@ try {
   mode='error';await turn('B','refine',{message:'调整'});s=await settled('B');assert.equal(s.status,'failed');assert.equal(s.pending,null);
   assert.equal((await chat.state('A')).status,'ready');
   assert.throws(()=>endpointURL('file:///etc/passwd'));assert.throws(()=>endpointURL('https://u:secret@example.com/mcp'));assert.throws(()=>endpointURL('http://example.com/mcp'));
+  mode='normal';for(let i=0;i<12;i++){await turn('A','refine',{message:'连续回合 '+i});const ready=await settled('A');assert.equal(ready.status,'question');}
   console.log('PASS creative gates: three rounds, custom direction, refinement, final confirmation, invalid reply, retry, stale writes, idempotency, persistence, project isolation');
   let sse=false,called=0,deleted=0;
   const server=http.createServer(async(req,res)=>{

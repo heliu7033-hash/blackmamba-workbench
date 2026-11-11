@@ -28,6 +28,12 @@ npm start
 
 可通过 `MAMBA_PORT` 和 `MAMBA_DATA_DIR` 指定端口及数据目录。不要同时在同一端口运行两份工作台。
 
+## Windows 应用
+
+Windows x64 桌面预览版与 Mac 共用核心代码。下载入口：[Releases](https://github.com/heliu7033-hash/blackmamba-workbench/releases)。安装包自带运行时，不含项目或账号；可选工具与验证范围见 [Windows 说明](docs/WINDOWS.md)。
+
+开发者运行 npm run build:win 构建安装包。Windows CI 会安装、启动、验证工作流并检查重启后的数据。
+
 ## macOS 应用
 
 安装 Xcode Command Line Tools 后运行：

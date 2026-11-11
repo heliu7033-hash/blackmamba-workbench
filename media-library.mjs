@@ -1,3 +1,4 @@
+import {findTool} from './runtime-platform.mjs';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
@@ -12,7 +13,7 @@ const extensions={audio:['wav','mp3','aac','m4a','aif','aiff','flac','ogg','wma'
 const types=Object.fromEntries(Object.entries(extensions).flatMap(([kind,exts])=>exts.map(ext=>['.'+ext,kind])));
 const mime={'.mp4':'video/mp4','.mov':'video/quicktime','.m4v':'video/mp4','.webm':'video/webm','.mp3':'audio/mpeg','.wav':'audio/wav','.m4a':'audio/mp4','.aac':'audio/aac','.ogg':'audio/ogg','.flac':'audio/flac','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.webp':'image/webp','.gif':'image/gif','.bmp':'image/bmp'};
 function error(message,status=400){return Object.assign(new Error(message),{status});}
-function binary(name){const choices=[process.env['MAMBA_'+name.toUpperCase()],path.join(os.homedir(),'.local/bin',name),'/opt/homebrew/bin/'+name,'/usr/local/bin/'+name,'/usr/bin/'+name];return choices.find(p=>p&&fs.existsSync(p));}
+const binary=findTool;
 function send(res,status,body){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(body));}
 async function body(req){let size=0,parts=[];for await(const part of req){size+=part.length;if(size>16000)throw error('请求过大',413);parts.push(part);}try{return JSON.parse(Buffer.concat(parts));}catch{throw error('请求格式无效');}}
 export function createMediaLibrary(data,options={}){
@@ -44,7 +45,7 @@ export function createMediaLibrary(data,options={}){
  const previewJobs=new Map();let activePreviews=0;
  const waveformJobs=new Map();let activeWaveforms=0;
  const bridge=options.bridge|| (async payload=>{
-  try{const {stdout}=await execute(binary('python3')||'/usr/bin/python3',[path.join(here,'scripts/resolve-media.py')],{timeout:20000,maxBuffer:1024*1024,env:{...process.env,MAMBA_RESOLVE_REQUEST:JSON.stringify(payload)}});return JSON.parse(stdout.trim().split('\n').at(-1));}
+  try{const {stdout}=await execute(binary('python3')||'python3',[path.join(here,'scripts/resolve-media.py')],{windowsHide:true,timeout:20000,maxBuffer:1024*1024,env:{...process.env,MAMBA_RESOLVE_REQUEST:JSON.stringify(payload)}});return JSON.parse(stdout.trim().split('\n').at(-1));}
   catch{throw error(payload.action==='import'?'达芬奇响应超时，导入结果未确认。请先检查时间线，不要重复导入。':'无法连接达芬奇。请打开工程，并在达芬奇偏好设置中启用本地外部脚本。',503);}
  });
  const summary=()=>({roots:config.roots,scanning,progress,warnings:nameWarning?[nameWarning,...warnings]:warnings,lastScan,total:db.prepare('SELECT count(*) AS n FROM media').get().n,importLocked:!!db.prepare("SELECT id FROM imports WHERE state='pending' LIMIT 1").get()});
@@ -176,7 +177,7 @@ export function createMediaLibrary(data,options={}){
   const input=await body(req);
   if(route==='roots'){
    if(scanning)throw error('请等待当前扫描完成再修改目录',409);
-   if(!Array.isArray(input.roots)||input.roots.length>30||input.roots.some(r=>typeof r!=='string'||!path.isAbsolute(r)||r==='/'||r.length>2048))throw error('请输入有效的素材文件夹绝对路径（最多 30 个，不允许磁盘根目录）');
+   if(!Array.isArray(input.roots)||input.roots.length>30||input.roots.some(r=>typeof r!=='string'||!path.isAbsolute(r)||path.resolve(r)===path.parse(path.resolve(r)).root||r.length>2048))throw error('请输入有效的素材文件夹绝对路径（最多 30 个，不允许磁盘根目录）');
    config={roots:[...new Set(input.roots.map(r=>path.resolve(r)))]};fs.writeFileSync(configFile+'.tmp',JSON.stringify(config,null,2));fs.renameSync(configFile+'.tmp',configFile);
    const keep=new Set(config.roots);for(const {root} of db.prepare('SELECT DISTINCT root FROM media').all())if(!keep.has(root))db.prepare('DELETE FROM media WHERE root=?').run(root);
    indexRevision++;void scan();return send(res,200,summary());

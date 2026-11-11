@@ -105,7 +105,15 @@ def import_clip(resolve, project, timeline, request):
 
 def main():
     request = json.loads(os.environ['MAMBA_RESOLVE_REQUEST'])
-    sys.path.insert(0, '/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/Modules')
+    base = os.environ.get('RESOLVE_SCRIPT_API')
+    if not base:
+        if sys.platform == 'win32':
+            base = os.path.join(os.environ.get('PROGRAMDATA', 'C:/ProgramData'), 'Blackmagic Design', 'DaVinci Resolve', 'Support', 'Developer', 'Scripting')
+        elif sys.platform == 'darwin':
+            base = '/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting'
+        else:
+            base = '/opt/resolve/Developer/Scripting'
+    sys.path.insert(0, os.path.join(base, 'Modules'))
     import DaVinciResolveScript
     resolve = DaVinciResolveScript.scriptapp('Resolve')
     if not resolve:
